@@ -49,7 +49,6 @@ def process_pdf(file_path, text_splitter, embeddings, client, collection_name):
 def create_vector(file_path: str, collection_name: str) -> any:
     collection_name = collection_name.upper()
     text_splitter, embeddings, client = initialize_components()
-    client.collections.list_all()
 
     all_indexs = client.collections.list_all()
     if any(collection_name == k.upper() for k in all_indexs.keys()):
@@ -98,8 +97,7 @@ def query_system(question, collection_name):
     return response["response"]
 
 
-# 查询处理
-def query_stream(question, collection_name):
+def get_reference(question, collection_name)->str:
     collection_name = collection_name.upper()
     embeddings = OllamaEmbeddings(model="snowflake-arctic-embed:335m")
 
@@ -114,14 +112,16 @@ def query_stream(question, collection_name):
     results = vector_store.similarity_search(question, k=3)
     context = "\n\n".join([doc.page_content for doc in results])
     if len(context) <= 0:
-        return "未找到相关文档！"
+        return None
 
+    return context
+# 查询处理
+def ollama_query_stream(question, context):
     # 构造 prompt
     prompt = f"""请根据以下上下文回答问题：
     {context}
     问题：{question}
     答案："""
-
     try:
         # 使用 Ollama 生成回答
         response = ollama.generate(

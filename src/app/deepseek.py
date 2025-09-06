@@ -1,4 +1,4 @@
-from typing import Any, List, Optional, Iterator, AsyncIterator
+from typing import Any, List, Optional, Iterator
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage,AIMessageChunk
 from langchain_core.outputs import ChatResult, ChatGeneration, ChatGenerationChunk
 from langchain_core.callbacks import CallbackManagerForLLMRun

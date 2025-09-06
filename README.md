@@ -1,8 +1,10 @@
 # xx_to_markdown
 
+## cr.weaviate.io/semitechnologies/weaviate:1.29.1
+
 ## init env
 
-pip install -r requirements.txt
+pip install -r requirements.txt --trusted-host pypi.org --trusted-host pypi.python.org --trusted-host=files.pythonhosted.org
 
 ## install ollam
 
@@ -17,7 +19,7 @@ pip install -r requirements.txt
 
 ollama pull snowflake-arctic-embed:335m
 
-## start weaviate
+## start weaviate /Users/jerry/LLM/weaviate
 
 docker-compose -f docker-compose.yaml up -d
 
@@ -37,7 +39,7 @@ docker-compose -f docker-compose.yaml up -d
 
 curl -X POST <http://127.0.0.1:5001/api/chat>   -H "Content-Type: application/json"  --no-buffer  -d '{"prompt": "bluebird", "index_name": "child_english"}'
 
-curl -X GET  "<http://localhost:5001/api/query?prompt=%22Travel%20Conditions%22&index_name=visa_demo>"  -H "Content-Type: application/json"  --no-buffer
+curl -X GET <http://localhost:5001/api/query?prompt=你好> -H "Content-Type: application/json"  --no-buffer
 
 # 本地测试安装
 
@@ -55,3 +57,21 @@ curl -X DELETE  <http://localhost:8080/v1/schema/Child_english>   -H 'Content-Ty
 # 验证删除结果
 
 curl <http://localhost:8080/v1/schema> | jq .classes[].class
+
+# pyenv
+
+python global 3.10.16
+python local 3.10.16
+python   versions
+pyenv  install/uninstall  3.10.16
+
+pip show flask
+
+# set python interpreter
+
+在 VS Code 中选择正确的 Python 解释器
+
+ 1. 打开 VS Code。
+ 2. 按 Cmd+Shift+P（Mac）或 Ctrl+Shift+P（Windows/Linux）打开命令面板。
+ 3. 输入并选择：Python: Select Interpreter
+ 4. 选择你安装 Flask 的解释器，比如：

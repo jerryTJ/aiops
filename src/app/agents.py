@@ -1,4 +1,4 @@
-from langchain.chat_models import ChatOpenAI
+
 from langchain.schema.runnable import RunnableLambda
 from langchain.schema import HumanMessage, AIMessage
 import asyncio
