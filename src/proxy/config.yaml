@@ -1,0 +1,5 @@
+servers:
+  - name: process-server
+    command: ["python", "process_server.py"]
+  - name: log-server
+    command: ["python", "log_server.py"]

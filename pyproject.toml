@@ -1,3 +1,9 @@
+[project]
+name = "xx-to-markdown"  # or whatever name is appropriate
+version = "0.1.0"
+description = ""
+dependencies = []
+
 [tool.poetry]
 name = "xx_to_markdown"
 version = "0.1.0"
@@ -497,6 +503,9 @@ zstandard = "0.23.0"
 
 [tool.poetry.scripts]
 xx_to_mk = "app.app:run"
+
+[tool.uv.workspace]
+members = ["src/aiops"]
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
