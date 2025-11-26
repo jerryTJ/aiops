@@ -2,8 +2,6 @@ from flask import Flask, request, Response, stream_with_context, render_template
 import os
 import json
 import uuid
-from doc2md import docx_to_markdown
-from ollamaDemo import create_vector, ollama_query_stream,get_reference
 from deepseek import DeepSeekChat
 from langchain_core.messages import HumanMessage
 

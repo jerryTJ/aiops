@@ -58,7 +58,7 @@ curl -X DELETE  <http://localhost:8080/v1/schema/Child_english>   -H 'Content-Ty
 
 curl <http://localhost:8080/v1/schema> | jq .classes[].class
 
-# pyenv
+# pyenv-安装python版本
 
 python global 3.10.16
 python local 3.10.16
@@ -66,6 +66,12 @@ python   versions
 pyenv  install/uninstall  3.10.16
 
 pip show flask
+
+# 创建单独的应用环境
+
+python -m venv ./env-name
+
+sourece .python-env/bin/activate
 
 # set python interpreter
 
