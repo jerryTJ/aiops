@@ -154,30 +154,60 @@
   <div class="container">
     <div class="sidebar">
       <div class="upload-section">
-        <h3>Upload Document</h3>
-        <div>
-          <label for="upload-index-name" style="display: block; margin-bottom: 5px;">Index Name:</label>
-          <input type="text" id="upload-index-name" placeholder="Enter index name (optional)"
-            style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
-        </div>
-        <input type="file" id="file-input" accept=".doc,.docx,.pdf">
-        <button id="upload-button">Upload</button>
-        <div id="upload-status" style="display: none;"></div>
+        <h3>上传SQL文件</h3>
+        <input type="file" id="file-input" accept=".sql">
       </div>
       <hr>
+      <h3>测试数据库信息</h3>
       <div class="index-selection-section" style="margin-bottom: 20px;">
-        <h3>Select Index</h3>
-        <select id="index-name-select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-          <option value="visa_demo" selected>visa_demo</option>
-          <option value="child_english">child_english</option>
-          <option value="devops">devops</option>
+        <label for="dialect" style="display: block; margin-bottom: 5px;">数据库类型:</label>
+        <select id="dialect" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
+          <option value="mysql" selected>mysql</option>
+          <option value="postgre">postgre</option>
+          <option value="oracle">oracle</option>
         </select>
+      </div>
+      <div class="index-selection-section" style="margin-bottom: 20px;">
+        <label for="db_address" style="display: block; margin-bottom: 5px;">数据库地址:</label>
+        <input type="input" id="db_address" placeholder="localhost:3306/db_name"
+          style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
+      </div>
+      <div class="index-selection-section" style="margin-bottom: 20px;">
+        <label for="db_user" style="display: block; margin-bottom: 5px;">数据库用户:</label>
+        <input type="input" id="db_user" placeholder="数据库用户(读写权限)"
+          style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
+      </div>
+      <div class="index-selection-section" style="margin-bottom: 20px;">
+        <label for="db_pwd" style="display: block; margin-bottom: 5px;">数据库密码:</label>
+        <input type="password" id="db_pwd" placeholder="数据库密码"
+          style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
+      </div>
+      <hr>
+      <h3>生产数据库信息</h3>
+      <div class="index-selection-section" style="margin-bottom: 20px;">
+        <label for="prod_db_address" style="display: block; margin-bottom: 5px;">数据库地址:</label>
+        <input type="input" id="prod_db_address" placeholder="localhost:3306/db_name"
+          style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
+      </div>
+      <div class="index-selection-section" style="margin-bottom: 20px;">
+        <label for="prod_db_user" style="display: block; margin-bottom: 5px;">数据库用户:</label>
+        <input type="input" id="prod_db_user" placeholder="数据库用户(只读)"
+          style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
+      </div>
+      <div class="index-selection-section" style="margin-bottom: 20px;">
+        <label for="prod_db_pwd" style="display: block; margin-bottom: 5px;">数据库密码:</label>
+        <input type="password" id="prod_db_pwd" placeholder="数据库密码"
+          style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
+      </div>
+      <hr />
+      <div class="upload-section">
+        <button id="upload-button">Upload</button>
+        <div id="upload-status" style="display: none;"></div>
       </div>
     </div>
     <div class="main-content">
       <div class="chat-area" id="chat-area">
-        <!-- Chat messages will appear here -->
-        <div class="message bot">Hello! Upload a document or ask me a question.</div>
+        <div class="message bot">请上传用于校验和生成changeSet的数据库文件</div>
       </div>
       <div class="input-area">
         <input type="text" id="chat-input" placeholder="Type your message...">
@@ -207,41 +237,34 @@
       chatArea.innerHTML = ''; // Clear chat area for potentially streamed markdown
 
       const formData = new FormData();
-      const indexNameInput = document.getElementById('upload-index-name');
-      const index_name = indexNameInput.value.trim();
-
-      // Set the index name in the dropdown and select it
-      if (index_name) {
-        const indexNameSelect = document.getElementById('index-name-select');
-        let optionExists = false;
-        // Check if the option already exists
-        for (let i = 0; i < indexNameSelect.options.length; i++) {
-          if (indexNameSelect.options[i].value === index_name) {
-            optionExists = true;
-            break;
-          }
-        }
-        // If the option doesn't exist, create and add it
-        if (!optionExists) {
-          const newOption = document.createElement('option');
-          newOption.value = index_name;
-          newOption.textContent = index_name;
-          indexNameSelect.appendChild(newOption);
-        }
-        // Set the select element's value to the new index name
-        indexNameSelect.value = index_name;
-      }
-
       formData.append('file', file);
+      const dialectInput = document.getElementById('dialect');
+      const dialect = dialectInput.value.trim();
+      formData.append("dialect", dialect)
+      const dbAddressInput = document.getElementById('db_address');
+      const db_address = dbAddressInput.value.trim();
+      formData.append("db_addr", db_address)
+      const dbUserInput = document.getElementById('db_user');
+      const db_user = dbUserInput.value.trim();
+      formData.append("db_user", db_user)
+      const dbPwdInput = document.getElementById('db_pwd');
+      const db_pwd = dbPwdInput.value.trim();
+      formData.append("db_pwd", db_pwd)
+      const prodDbAddressInput = document.getElementById('prod_db_address');
+      const prod_db_addrss = prodDbAddressInput.value.trim();
+      formData.append("prod_db_addr", prod_db_addrss)
+      const prodDbUerInput = document.getElementById('prod_db_user');
+      const prod_db_user = prodDbUerInput.value.trim();
+      formData.append("prod_db_user", prod_db_user)
+      const prodDbPwdInput = document.getElementById('prod_db_pwd');
+      const prod_db_pwd = prodDbPwdInput.value.trim();
+      formData.append("prod_db_pwd", prod_db_pwd)
+
       // NOTE: index_name is sent as a query parameter, not in FormData body
 
       try {
         // Construct the URL with index_name as a query parameter if provided
         let uploadUrl = '/api/upload';
-        if (index_name) {
-          uploadUrl += `?index_name=${encodeURIComponent(index_name)}`;
-        }
-
         const response = await fetch(uploadUrl, { // Use the potentially modified URL
           method: 'POST',
           body: formData, // FormData still contains the file

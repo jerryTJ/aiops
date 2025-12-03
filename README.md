@@ -81,3 +81,10 @@ sourece .python-env/bin/activate
  2. 按 Cmd+Shift+P（Mac）或 Ctrl+Shift+P（Windows/Linux）打开命令面板。
  3. 输入并选择：Python: Select Interpreter
  4. 选择你安装 Flask 的解释器，比如：
+
+# pip package
+
+langchain-openai 1.1.0
+langchain-mcp-adapters 0.1.14
+mcp 1.22.0
+langchain-mcp 0.2.1
