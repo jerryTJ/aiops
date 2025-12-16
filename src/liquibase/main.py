@@ -1,0 +1,152 @@
+from flask import Flask, request, Response, render_template, session
+from liquibase.agent.chat import ask_llm
+import re
+import os
+import uuid
+import asyncio
+
+app = Flask(__name__)
+
+app.secret_key = "50a69787ac4343ew3cb9f813c0aafe3b90"
+
+
+@app.route("/")
+def index():
+    return render_template("index.html")
+
+
+def sse_format(message: str) -> str:
+    """格式化为 SSE 输出格式"""
+    return f"{message}\n\n"
+
+
+@app.route("/api/upload", methods=["POST"])
+def upload_file():
+    if "file" not in request.files:
+        return Response("No file part", status=400)
+    file = request.files["file"]
+    if file.filename == "":
+        return Response("No file part", status=400)
+    if not file.filename.endswith((".sql")):
+        return Response("Invalid file type. Only sql are allowed.", 400)
+
+    try:
+        temp_filename = str(uuid.uuid4()) + os.path.splitext(file.filename)[1]
+        filepath = os.path.join("/tmp/", temp_filename)
+
+        file.save(filepath)
+        cache_db_info(file_path=filepath, forms=request.form)
+        dev_db_config = session["dev_db_config"]
+        prod_db_config = session["prod_db_config"]
+        db_name = session["db_name"]
+
+        def generate():
+            sql_list = parse_sql_file(filepath)
+            if not sql_list:
+                yield sse_format("No SQL found.")
+                return
+
+            for idx, sql in enumerate(sql_list, 1):
+                yield sse_format(f"[正在解析第{idx}条sql:]{sql}")
+                
+                # LLM 调用
+                result = asyncio.run(ask_llm(sql, dev_db_config, prod_db_config, db_name))
+                if result["status"] == "success":
+                    yield sse_format("生成的ChangeSet如下:")
+                    # 按行输出
+                    for line in result["message"].split("\n"):
+                        yield sse_format(f"{line}")
+                else:
+                    yield sse_format("生成ChangeSet失败，原因如下:")
+                    yield sse_format(result["message"])
+                    yield sse_format("如果进行修改，请重新输入修改sql")
+
+        return Response(generate(), mimetype="text/event-stream")
+        
+    except Exception as e:
+        return Response(f"An error occurred: {str(e)}", 500)
+
+
+def cache_db_info(file_path: str, forms: dict):
+    dialect = forms["dialect"]
+    db_addr = forms["db_addr"].rsplit("/", 1)
+    db_url = db_addr[0]
+    db_name = db_addr[1]
+    db_user = forms["db_user"]
+    db_pwd = forms["db_pwd"]
+    prod_db_addr = forms["prod_db_addr"].rsplit("/", 1)
+    prod_db_url = prod_db_addr[0]
+    prod_db_name = prod_db_addr[1]
+    prod_db_user = forms["prod_db_user"]
+    prod_db_pwd = forms["prod_db_pwd"]
+    dev_db_config = {
+        "db_url": db_url,
+        "db_name": db_name,
+        "username": db_user,
+        "pwd": db_pwd,
+        "dialect": dialect
+    }
+    prod_db_config = {
+        "db_url": prod_db_url,
+        "db_name": prod_db_name,
+        "username": prod_db_user,
+        "pwd": prod_db_pwd,
+        "dialect": dialect
+    }
+    session["sql_file"] = file_path
+    session["db_name"] = db_name
+    session["dev_db_config"] = dev_db_config
+    session["dev_db_pwd"] = db_pwd
+    session["prod_db_config"] = prod_db_config
+
+
+def parse_sql_file(path: str) -> list[str]:
+    """
+    读取 SQL 文件，以 ; 结尾拆分 SQL 语句
+    支持处理 \\n、空格、注释等
+    """
+    with open(path, encoding="utf-8") as f:
+        content = f.read()
+
+    # 去掉注释（-- 注释）
+    content = re.sub(r'--.*', '', content)
+
+    # 按 ; 拆分，并 strip 过滤空字符串
+    sql_list = [stmt.strip() for stmt in content.split(";") if stmt.strip()]
+    return sql_list
+
+
+@app.route("/api/chat", methods=["POST"])
+def stream():
+    data = request.get_json()
+    prompt_sql = data.get("prompt", "")
+    if prompt_sql == "":
+        return Response(sse_format("请输入sql"), mimetype="text/event-stream")
+    dev_db_config = session["dev_db_config"]
+    prod_db_config = session["prod_db_config"]
+    db_name = session["db_name"]
+    if dev_db_config is None or dev_db_config == "":
+        return Response(sse_format("请先上传sql文件和配置数据库信息"), mimetype="text/event-stream")
+
+    def generate():
+        # LLM 调用
+        result = asyncio.run(ask_llm(prompt_sql, dev_db_config, prod_db_config, db_name))
+        if result["status"] == "success":
+            yield sse_format("生成的ChangeSet如下:")
+            # 按行输出
+            for line in result["message"].split("\n"):
+                yield sse_format(f"{line}")
+        else:
+            yield sse_format("生成ChangeSet失败，原因如下:")
+            yield sse_format(result["message"])
+            yield sse_format("如果进行修改，请重新输入修改sql")
+
+    return Response(generate(), mimetype="text/event-stream")
+
+
+def run():
+    app.run(debug=True, port=5001)
+
+
+if __name__ == "__main__":
+    run()

@@ -338,10 +338,6 @@
       const prompt = chatInput.value.trim();
       if (!prompt) return;
 
-      // Get the selected index name
-      const indexNameSelect = document.getElementById('index-name-select');
-      const index_name = indexNameSelect.value;
-
       addMessage('user', prompt);
       chatInput.value = '';
       let botMessageDiv = addMessage('bot', '...'); // Placeholder for bot response
@@ -352,7 +348,7 @@
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ prompt: prompt, index_name: index_name }), // Use selected index name
+          body: JSON.stringify({ prompt: prompt }), // Use selected index name
         });
 
         if (!response.ok) {
@@ -372,9 +368,9 @@
           const chunk = decoder.decode(value, { stream: true });
           // Simple handling: append chunk to message
           // Assumes server sends plain text chunks directly
-          content = JSON.parse(chunk)
-          console.log(content)
-          accumulatedResponse += content.content;
+          //content = JSON.parse(chunk)
+          console.log(chunk)
+          accumulatedResponse += chunk //content.content;
           botMessageDiv.textContent = accumulatedResponse; // Update the bot message div
           chatArea.scrollTop = chatArea.scrollHeight; // Keep scrolled to bottom
         }
@@ -417,7 +413,7 @@
         queryResult.style.display = 'block';
 
         try {
-            const response = await fetch(`/api/query?prompt=${encodeURIComponent(prompt)}&index_name=${encodeURIComponent(indexName)}`);
+            const response = await fetch(`/api/query?prompt=${encodeURIComponent(prompt)}`);
             queryResult.textContent = `Status: ${response.status} ${response.statusText}\n`;
 
             if (!response.ok) {

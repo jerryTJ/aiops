@@ -1,0 +1,80 @@
+openssl genrsa -out root.key 4096
+
+
+root.cnf
+[ req ]
+default_bits       = 4096
+default_md         = sha256
+prompt             = no
+distinguished_name = dn
+x509_extensions    = v3_ca
+
+[ dn ]
+C  = CN
+ST = Beijing
+L  = Beijing
+O  = IDE-Internal-CA
+OU = DevOps
+CN = IDE Root CA
+
+[ v3_ca ]
+subjectKeyIdentifier = hash
+authorityKeyIdentifier = keyid:always,issuer
+basicConstraints = critical, CA:true
+keyUsage = critical, digitalSignature, cRLSign, keyCertSign
+
+openssl req -x509 -new -nodes \
+  -key root.key \
+  -sha256 \
+  -days 36500 \
+  -out root.crt \
+  -config root.cnf
+
+ide_san.cnf
+[ req ]
+default_bits       = 2048
+prompt             = no
+default_md         = sha256
+req_extensions     = v3_req
+distinguished_name = dn
+
+[ dn ]
+CN = *.ide.dev.jh
+
+[ v3_req ]
+subjectAltName = @alt_names
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+
+[ alt_names ]
+DNS.1 = *.ide.dev.jh
+DNS.2 = cloud.ide.dev.jh
+DNS.3 = admin.ide.dev.jh
+DNS.4 = cloudide.ide.dev.jh
+DNS.5 = fileserver.ide.dev.jh
+DNS.6 = hon.ide.dev.jh
+DNS.7 = *.hon.ide.dev.jh
+DNS.8 = cloudidebackend.ide.dev.jh
+DNS.9 = caselike.ide.dev.jh
+DNS.10 = cnstack.ide.dev.jh
+DNS.11 = yunyou.ide.dev.jh
+DNS.12 = minio.ide.dev.jh
+DNS.13 = iam.ide.dev.jh
+
+
+openssl genrsa -out server.key 2048
+
+openssl req -new \
+  -key server.key \
+  -out server.csr \
+  -config ide_san.cnf
+
+  openssl x509 -req \
+  -in server.csr \
+  -CA root.crt -CAkey root.key \
+  -CAcreateserial \
+  -out server.crt \
+  -days 3650 \
+  -sha256 \
+  -extensions v3_req \
+  -extfile ide_san.cnf

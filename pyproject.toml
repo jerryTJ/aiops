@@ -2,12 +2,13 @@
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+
 [project]
-name = "liquibas-agent"
+name = "liquibase_agent"
 dynamic = ["version"]
 description = "Liquibase agent"
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.11"
 keywords = ["agent", "deepseek", "liquibase", "mysql"]
 authors = [
     { name = "jerry", email = "jerrytekton@gmail.com" },
@@ -17,20 +18,19 @@ classifiers = [
     "Intended Audience :: Developers",
     "License :: OSI Approved :: MIT License",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
-    "fastmcp>=0.1.3",
-    "pydantic>=2.7",
-    "sqlalchemy>=2.0",
-    "psycopg[binary]>=3.1",
+    "Flask==3.1.2",
+    "grpcio-status==1.76.0",
+    "langchain==1.1.2",
+    "langchain-google-genai==3.2.0",
+    "langchain-mcp-adapters==0.1.14",
+    "langchain-openai==1.1.0",
+    "cryptography==46.0.3"
 ]
-
 [project.optional-dependencies]
 dev = [
     "pytest>=7.0.0",
@@ -45,36 +45,49 @@ test = [
     "pytest>=7.0.0",
     "pytest-asyncio>=0.21.0",
     "pytest-cov>=4.0.0",
+     "pytest-mock>=3.0.0",
     "httpx>=0.25.0",
 ]
 
 [project.urls]
-Documentation = "https://github.com/jerry/liquibas-a gen t#readme"
-Issues = "https://github.com/jerry/liquibas-agent/issues"
-Source = "https://github.com/jerry/liquibas-agent"
+Documentation = "https://github.com/jerry/liquibase_agent t#readme"
+Issues = "https://github.com/jerry/liquibase_agent/issues"
+Source = "https://github.com/jerry/liquibase_agent"
 
 [project.scripts]
-liquibas_agent = "database_tools.main:run_server"
+liquibase-agent = "liquibase_agent.cli:main"
+liquibase-agent-server = "liquibase_agent.server:main"
 
+[project.entry-points."liquibase_agent.tools"]
+database = "liquibase_agent.tools.database:DatabaseTool"
+changelog = "liquibase_agent.tools.changelog:ChangelogTool"
+
+[tool.hatch.build]
+include = ["src/liquibase_agent/**/*"]
 [tool.hatch.envs.default]
-pip-args = ["-i", "https://pypi.tuna.tsinghua.edu.cn/simple"]
 type = "virtual"
-python = "3.13.2"
-path = ".hatch_env"
+path = ".langchain-env"
 dependencies = [
-    "fastapi>=0.95",
-    "uvicorn[standard]>=0.22"
+    "Flask==3.1.2",
+    "grpcio-status==1.76.0",
+    "langchain==1.1.2",
+    "langchain-google-genai==3.2.0",
+    "langchain-mcp-adapters==0.1.14",
+    "langchain-openai==1.1.0",
+    "cryptography==46.0.3"
 ]
 
+
 [tool.hatch.build.targets.wheel]
-packages = ["src/database_tools"]
+packages = ["src/liquibase"]
 
 [tool.hatch.version]
-path = "src/database_tools/__about__.py"
+path = "src/config/__about__.py"
 
 [tool.hatch.envs.default.scripts]
-start = "uvicorn database_tools.main:app --host 0.0.0.0 --port 8000 --reload"
-serve = "python -m database_tools.main"
+# start = "uvicorn liquibase.main:app --host 0.0.0.0 --port 8000 --reload"
+start = "gunicorn liquibase.main:app -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:5000"
+serve = "python -m liquibase.main"
 
 [tool.hatch.envs.types]
 extra-dependencies = [
@@ -91,15 +104,15 @@ features = [
 test = "pytest"
 lint = "black . && isort . && flake8"
 format = "black . && isort ."
-start = "uvicorn database_tools.main:app --host 0.0.0.0 --port 8000 --reload"
-serve = "python -m database_tools.main"
+start = "uvicorn liquibase.main:app --host 0.0.0.0 --port 8000 --reload"
+serve = "python -m liquibase.main"
 
 [tool.hatch.envs.test]
 features = ["test"]
 
 [tool.coverage.paths]
-database_tools = ["src/database_tools", "*/liquibas-agent/src/database_tools"]
-tests = ["tests", "*/liquibas-agent/tests"]
+liquibase = ["src/liquibase", "*/liquibase_agent/src/liquibase"]
+tests = ["tests", "*/liquibase_agent/tests"]
 
 [tool.black]
 target-version = ['py38']

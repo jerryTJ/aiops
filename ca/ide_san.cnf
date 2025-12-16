@@ -1,0 +1,29 @@
+[ req ]
+default_bits       = 2048
+prompt             = no
+default_md         = sha256
+req_extensions     = v3_req
+distinguished_name = dn
+
+[ dn ]
+CN = *.ide.dev.jh
+
+[ v3_req ]
+subjectAltName = @alt_names
+keyUsage = digitalSignature, keyEncipherment
+extendedKeyUsage = serverAuth
+
+[ alt_names ]
+DNS.1 = *.ide.dev.jh
+DNS.2 = cloud.ide.dev.jh
+DNS.3 = admin.ide.dev.jh
+DNS.4 = cloudide.ide.dev.jh
+DNS.5 = fileserver.ide.dev.jh
+DNS.6 = hon.ide.dev.jh
+DNS.7 = *.hon.ide.dev.jh
+DNS.8 = cloudidebackend.ide.dev.jh
+DNS.9 = caselike.ide.dev.jh
+DNS.10 = cnstack.ide.dev.jh
+DNS.11 = yunyou.ide.dev.jh
+DNS.12 = minio.ide.dev.jh
+DNS.13 = iam.ide.dev.jh

@@ -8,7 +8,7 @@ from langchain_core.messages import BaseMessage
 
 class AgentTracer(AsyncCallbackHandler):
 
-    def __init__(self, log_file="trace_log.json"):
+    def __init__(self, log_file="logs/trace_log.json"):
         self.trace_id = str(uuid.uuid4())
         self.log_file = log_file
         self.current_step = 0

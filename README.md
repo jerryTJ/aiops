@@ -88,3 +88,25 @@ langchain-openai 1.1.0
 langchain-mcp-adapters 0.1.14
 mcp 1.22.0
 langchain-mcp 0.2.1
+
+# gunicorn", "-w", "4", "-b", "0.0.0.0:5000", "app:app"
+
+# hatch
+
+hatch env create
+创建环境
+hatch shell （同步以来和启动环境
+
+初始化项目
+hatch new foo
+创建环境
+hatch env create
+进入环境
+hatch shell
+运行脚本
+hatch run <script>
+在指定 env 运行
+hatch run env:script
+
+pip freeze > ./requirements.txt
+pip list --not-required
