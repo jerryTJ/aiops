@@ -210,7 +210,6 @@ liquibase 验证失败： `{"status":"error", "message":"脚本执行失败，�
 ### 成功情况 (仅输出脚本)
 
 ```sql
---liquibase formatted sql
 --changeset lisi:T-applier-20251125-001 context:prod
 --preconditions onFail:WARN
 --precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM t_users where id =1
@@ -261,7 +260,6 @@ UPDATE t_users SET nick_name='Tom', status=1 WHERE id=100;
 #### 成功情况 (仅输出脚本)
 
 ```sql
-  --liquibase formatted sql
   --changeset lisi:T-applier-20251202-001 context:prod
   --preconditions onFail:WARN
   --precondition-sql-check expectedResult:0 SELECT COUNT(*) FROM t_users where id =1

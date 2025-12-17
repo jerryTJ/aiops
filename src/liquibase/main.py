@@ -1,9 +1,10 @@
-from flask import Flask, request, Response, render_template, session
-from liquibase.agent.chat import ask_llm
+from flask import Flask, request, Response, render_template, session, send_from_directory
+from liquibase.agent.create_changeset import ask_llm
 import re
 import os
 import uuid
 import asyncio
+from datetime import datetime
 
 app = Flask(__name__)
 
@@ -21,7 +22,7 @@ def sse_format(message: str) -> str:
 
 
 @app.route("/api/upload", methods=["POST"])
-def upload_file():
+def create_changeset():
     if "file" not in request.files:
         return Response("No file part", status=400)
     file = request.files["file"]
@@ -39,6 +40,7 @@ def upload_file():
         dev_db_config = session["dev_db_config"]
         prod_db_config = session["prod_db_config"]
         db_name = session["db_name"]
+        change_sets = []
 
         def generate():
             sql_list = parse_sql_file(filepath)
@@ -53,13 +55,17 @@ def upload_file():
                 result = asyncio.run(ask_llm(sql, dev_db_config, prod_db_config, db_name))
                 if result["status"] == "success":
                     yield sse_format("生成的ChangeSet如下:")
+                    change_sets.append({"index": idx, "sql": sql, "result":result["message"]})
                     # 按行输出
                     for line in result["message"].split("\n"):
                         yield sse_format(f"{line}")
                 else:
-                    yield sse_format("生成ChangeSet失败，原因如下:")
+                    yield sse_format(f"解析第{idx}条sql生成ChangeSet失败，原因如下:")
                     yield sse_format(result["message"])
-                    yield sse_format("如果进行修改，请重新输入修改sql")
+                    yield sse_format("如果进行修改，请重新输入修改后的sql")
+            # 所有sql处理完后，写入changeSet文件
+            file_name = write_list_split_by_newline(change_sets, db_name, mode="w", encoding="utf-8")
+            yield sse_format(f"changeSet文件已生成，下载地址:http://127.0.0.1:5001/download/{file_name} ")
 
         return Response(generate(), mimetype="text/event-stream")
         
@@ -116,8 +122,36 @@ def parse_sql_file(path: str) -> list[str]:
     return sql_list
 
 
+def write_list_split_by_newline(data_list, db_name, mode="w", encoding="utf-8"):
+    now_str = datetime.now().strftime("%Y_%m_%d")
+    file_name = f"changeSet_{db_name}_{now_str}.sql"
+    file_path = f"/tmp/{file_name}"
+    with open(file_path, mode, encoding=encoding) as f:
+        f.write("--liquibase formatted sql\n")
+        for item in data_list:
+            idx = item["index"]
+            result = item["result"]
+            f.write("\n")
+            f.write(f"/* [第{[idx]}条] */\n")
+            for line in str(result).splitlines():
+                f.write(line + "\n")
+    return file_name
+
+
+BASE_DIR = "/tmp"
+
+
+@app.route("/download/<path:filename>")
+def download(filename):
+    return send_from_directory(
+        BASE_DIR,
+        filename,
+        as_attachment=True
+    )
+
+
 @app.route("/api/chat", methods=["POST"])
-def stream():
+def repaire_sql():
     data = request.get_json()
     prompt_sql = data.get("prompt", "")
     if prompt_sql == "":

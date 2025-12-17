@@ -75,6 +75,9 @@
 ## 审核结论
 
 - 结论：PASS / FAIL / NEED FIX
+- 结论为PASS 后调用工具 check-liquibase 进一步验证，参数为：
+    `db_config`: 数据库配置
+    `change_sets`: 用户输入changeSet语句
 
 ## 问题列表
 

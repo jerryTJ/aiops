@@ -1,3 +1,4 @@
 .mcp-env
 .vscode
 __pycache__
+logs
