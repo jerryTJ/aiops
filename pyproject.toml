@@ -3,126 +3,126 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 
+# ------------------------
+# Project metadata
+# ------------------------
 [project]
 name = "liquibase_agent"
 dynamic = ["version"]
-description = "Liquibase agent"
+description = "Liquibase Agent Service"
 readme = "README.md"
-requires-python = ">=3.11"
-keywords = ["agent", "deepseek", "liquibase", "mysql"]
+requires-python = ">=3.13"
+
+
 authors = [
-    { name = "jerry", email = "jerrytekton@gmail.com" },
+  { name = "Jerry Liu", email = "jerrytekton@gmail.com" }
 ]
+
+keywords = ["liquibase", "agent", "langchain", "mysql"]
+
 classifiers = [
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
-    "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.11",
-    "Programming Language :: Python :: 3.12",
-    "Programming Language :: Python :: 3.13",
+  "Development Status :: 3 - Alpha",
+  "Intended Audience :: Developers",
+  "License :: OSI Approved :: MIT License",
+  "Programming Language :: Python :: 3.13",
 ]
+
 dependencies = [
-    "Flask==3.1.2",
-    "grpcio-status==1.76.0",
-    "langchain==1.1.2",
-    "langchain-google-genai==3.2.0",
-    "langchain-mcp-adapters==0.1.14",
-    "langchain-openai==1.1.0",
-    "cryptography==46.0.3"
+  "Flask==3.1.2",
+  "gunicorn>=21.0",
+  "uvicorn>=0.30",
+
+  "langchain==1.1.2",
+  "langchain-openai==1.1.0",
+  "langchain-google-genai==3.2.0",
+  "langchain-mcp-adapters==0.1.14",
+
+  "grpcio-status==1.76.0",
+  "cryptography==46.0.3",
 ]
+
+
+# ------------------------
+# Optional dependencies
+# ------------------------
 [project.optional-dependencies]
 dev = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "black>=23.0.0",
-    "isort>=5.12.0",
-    "flake8>=6.0.0",
-    "mypy>=1.0.0",
-    "pre-commit>=3.0.0",
-]
-test = [
-    "pytest>=7.0.0",
-    "pytest-asyncio>=0.21.0",
-    "pytest-cov>=4.0.0",
-     "pytest-mock>=3.0.0",
-    "httpx>=0.25.0",
+  "pytest>=7.0",
+  "pytest-asyncio>=0.21",
+  "pytest-cov>=4.0",
+  "pytest-mock>=3.0",
+
+  "black>=23.0",
+  "isort>=5.12",
+  "flake8>=6.0",
+  "mypy>=1.0",
+
+  "httpx>=0.25",
+  "pre-commit>=3.0",
 ]
 
-[project.urls]
-Documentation = "https://github.com/jerry/liquibase_agent t#readme"
-Issues = "https://github.com/jerry/liquibase_agent/issues"
-Source = "https://github.com/jerry/liquibase_agent"
 
+# ------------------------
+# Entry points
+# ------------------------
 [project.scripts]
 liquibase-agent = "liquibase_agent.cli:main"
-liquibase-agent-server = "liquibase_agent.server:main"
+liquibase-agent-server = "liquibase_agent.main:run"
+
 
 [project.entry-points."liquibase_agent.tools"]
-database = "liquibase_agent.tools.database:DatabaseTool"
-changelog = "liquibase_agent.tools.changelog:ChangelogTool"
+liquibase = "liquibase_agent.tools.liquibase:LiquibaseTool"
 
+
+# ------------------------
+# Hatch build
+# ------------------------
 [tool.hatch.build]
-include = ["src/liquibase_agent/**/*"]
-[tool.hatch.envs.default]
-type = "virtual"
-path = ".langchain-env"
-dependencies = [
-    "Flask==3.1.2",
-    "grpcio-status==1.76.0",
-    "langchain==1.1.2",
-    "langchain-google-genai==3.2.0",
-    "langchain-mcp-adapters==0.1.14",
-    "langchain-openai==1.1.0",
-    "cryptography==46.0.3"
-]
+packages = ["src/liquibase_agent"]
 
-
-[tool.hatch.build.targets.wheel]
-packages = ["src/liquibase"]
 
 [tool.hatch.version]
 path = "src/config/__about__.py"
 
-[tool.hatch.envs.default.scripts]
-# start = "uvicorn liquibase.main:app --host 0.0.0.0 --port 8000 --reload"
-start = "gunicorn liquibase.main:app -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:5000"
-serve = "python -m liquibase.main"
 
-[tool.hatch.envs.types]
-extra-dependencies = [
-    "mypy>=1.0.0",
-]
+# ------------------------
+# Hatch environments
+# ------------------------
+[tool.hatch.envs.default]
+type = "virtual"
+path = ".langchain-env"
+
+[tool.hatch.envs.default.install]
+editable = true
+
+
+[tool.hatch.envs.default.scripts]
+start = "gunicorn liquibase_agent.main:app -k uvicorn.workers.UvicornWorker -w 4 -b 0.0.0.0:5001"
+dev = "uvicorn liquibase_agent.main:app --reload --host 0.0.0.0 --port 5001"
+
 
 [tool.hatch.envs.dev]
-features = [
-    "dev",
-    "test",
-]
+features = ["dev"]
+
 
 [tool.hatch.envs.dev.scripts]
 test = "pytest"
 lint = "black . && isort . && flake8"
 format = "black . && isort ."
-start = "uvicorn liquibase.main:app --host 0.0.0.0 --port 8000 --reload"
-serve = "python -m liquibase.main"
 
-[tool.hatch.envs.test]
-features = ["test"]
 
-[tool.coverage.paths]
-liquibase = ["src/liquibase", "*/liquibase_agent/src/liquibase"]
-tests = ["tests", "*/liquibase_agent/tests"]
-
+# ------------------------
+# Tooling configs
+# ------------------------
 [tool.black]
-target-version = ['py38']
 line-length = 88
-include = '\.pyi?$'
+target-version = ["py313"]
+
 
 [tool.isort]
 profile = "black"
-multi_line_output = 3
 line_length = 88
+
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

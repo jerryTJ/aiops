@@ -1,11 +1,18 @@
-from flask import Flask, request, Response, render_template, session, send_from_directory
-from liquibase.agent.create_changeset import ask_llm
+from flask import (
+    Flask,
+    request,
+    Response,
+    render_template,
+    session,
+    send_from_directory,
+)
 import re
 import os
 import uuid
 import asyncio
 import json
 from datetime import datetime
+from liquibase_agent.agent.create_changeset import CreateChangesetAgent
 
 app = Flask(__name__)
 
@@ -15,11 +22,6 @@ app.secret_key = "50a69787ac4343ew3cb9f813c0aafe3b90"
 @app.route("/")
 def index():
     return render_template("index.html")
-
-
-def sse_format(message: str) -> str:
-    """格式化为 SSE 输出格式"""
-    return f"{message}\n"
 
 
 def sse_event(event, data):
@@ -49,6 +51,13 @@ def create_changeset():
         prod_db_config = session["prod_db_config"]
         db_name = session["db_name"]
         change_sets = []
+        agent = CreateChangesetAgent(
+            dev_db_config=dev_db_config,
+            prod_db_config=prod_db_config,
+            db_name=db_name,
+            author=request.form.get("author", "admin"),
+            env=request.form.get("env", "prod"),
+        )
 
         def generate():
             sql_list = parse_sql_file(filepath)
@@ -58,35 +67,38 @@ def create_changeset():
 
             for idx, sql in enumerate(sql_list, 1):
                 yield sse_event("message", f"[正在解析第{idx}条sql:]{sql}")
-                
+
                 # LLM 调用
-                result = asyncio.run(ask_llm(sql, dev_db_config, prod_db_config, db_name))
+                result = asyncio.run(agent.question(sql))
                 if result["status"] == "success":
                     yield sse_event("message", "生成的ChangeSet如下:")
-                    change_sets.append({"index": idx, "sql": sql, "result":result["message"]})
+                    change_sets.append(
+                        {"index": idx, "sql": sql, "result": result["message"]}
+                    )
                     # 按行输出
                     for line in result["message"].split("\n"):
                         yield sse_event("message", f"{line}")
                 else:
-                    yield sse_event("message", f"解析第{idx}条sql生成ChangeSet失败，原因如下:")
+                    yield sse_event(
+                        "message", f"解析第{idx}条sql生成ChangeSet失败，原因如下:"
+                    )
                     yield sse_event("message", result["message"])
                     yield sse_event("message", "如果进行修改，请重新输入修改后的sql")
             # 所有sql处理完后，写入changeSet文件
-            file_name = write_list_split_by_newline(change_sets, db_name, mode="w", encoding="utf-8")
+            file_name = write_list_split_by_newline(
+                change_sets, db_name, mode="w", encoding="utf-8"
+            )
             yield sse_event("message", "changeSet文件已生成，可以点击右上角的链接下载")
             url = f"http://127.0.0.1:5001/download/{file_name}"
             yield sse_event("control", json.dumps({"url": url}))
-            yield sse_event("done", "end") 
+            yield sse_event("done", "end")
 
         return Response(
-                generate(),
-                mimetype="text/event-stream",
-                headers={
-                    "Cache-Control": "no-cache",
-                    "X-Accel-Buffering": "no"
-                }
+            generate(),
+            mimetype="text/event-stream",
+            headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
         )
-        
+
     except Exception as e:
         return Response(f"An error occurred: {str(e)}", 500)
 
@@ -108,14 +120,14 @@ def cache_db_info(file_path: str, forms: dict):
         "db_name": db_name,
         "username": db_user,
         "pwd": db_pwd,
-        "dialect": dialect
+        "dialect": dialect,
     }
     prod_db_config = {
         "db_url": prod_db_url,
         "db_name": prod_db_name,
         "username": prod_db_user,
         "pwd": prod_db_pwd,
-        "dialect": dialect
+        "dialect": dialect,
     }
     session["sql_file"] = file_path
     session["db_name"] = db_name
@@ -133,7 +145,7 @@ def parse_sql_file(path: str) -> list[str]:
         content = f.read()
 
     # 去掉注释（-- 注释）
-    content = re.sub(r'--.*', '', content)
+    content = re.sub(r"--.*", "", content)
 
     # 按 ; 拆分，并 strip 过滤空字符串
     sql_list = [stmt.strip() for stmt in content.split(";") if stmt.strip()]
@@ -161,11 +173,7 @@ BASE_DIR = "/tmp"
 
 @app.route("/download/<path:filename>")
 def download(filename):
-    return send_from_directory(
-        BASE_DIR,
-        filename,
-        as_attachment=True
-    )
+    return send_from_directory(BASE_DIR, filename, as_attachment=True)
 
 
 @app.route("/api/chat", methods=["POST"])
@@ -178,11 +186,23 @@ def repaire_sql():
     prod_db_config = session["prod_db_config"]
     db_name = session["db_name"]
     if dev_db_config is None or dev_db_config == "":
-        return Response(sse_event("message", "请先上传sql文件和配置数据库信息"), mimetype="text/event-stream")
+        return Response(
+            sse_event("message", "请先上传sql文件和配置数据库信息"),
+            mimetype="text/event-stream",
+        )
+    agent = CreateChangesetAgent(
+        dev_db_config=dev_db_config,
+        prod_db_config=prod_db_config,
+        db_name=db_name,
+        author=request.form.get("author", "admin"),
+        env=request.form.get("env", "prod"),
+    )
 
     def generate():
         # LLM 调用
-        result = asyncio.run(ask_llm(prompt_sql, dev_db_config, prod_db_config, db_name))
+        result = asyncio.run(
+            agent.question(prompt_sql)
+        )
         if result["status"] == "success":
             yield sse_event("message", "生成的ChangeSet如下:")
             # 按行输出
