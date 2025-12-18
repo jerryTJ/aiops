@@ -1,332 +1,673 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="zh-CN">
 
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Document Interaction</title>
+  <title>数据库交互工具</title>
   <style>
-    body {
-      font-family: sans-serif;
+    * {
       margin: 0;
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      background-color: #f4f4f4;
-    }
-
-    .container {
-      display: flex;
-      flex: 1;
-      overflow: hidden;
-      /* Prevent overall page scroll */
-    }
-
-    .sidebar {
-      width: 250px;
-      background-color: #e9e9e9;
-      padding: 20px;
+      padding: 0;
       box-sizing: border-box;
-      overflow-y: auto;
-      border-right: 1px solid #ccc;
     }
 
-    .main-content {
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .app-container {
+      width: 100%;
+      max-width: 1400px;
+      height: 90vh;
+      background: rgba(255, 255, 255, 0.98);
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+    }
+
+    /* 顶部工具栏 - T型布局的横向部分 */
+    .toolbar {
+      background: linear-gradient(180deg, #f5f5f7 0%, #e8e8ea 100%);
+      border-bottom: 1px solid #d1d1d6;
+      padding: 16px 24px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .toolbar-section {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 0 12px;
+      border-right: 1px solid #d1d1d6;
+    }
+
+    .toolbar-section:last-child {
+      border-right: none;
+    }
+
+    .toolbar-section label {
+      font-size: 13px;
+      font-weight: 500;
+      color: #1d1d1f;
+    }
+
+    .toolbar-section input,
+    .toolbar-section select {
+      padding: 6px 12px;
+      border: 1px solid #d1d1d6;
+      border-radius: 8px;
+      font-size: 13px;
+      background: white;
+      transition: all 0.2s;
+      min-width: 150px;
+    }
+
+    .toolbar-section input:focus,
+    .toolbar-section select:focus {
+      outline: none;
+      border-color: #0071e3;
+      box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+    }
+
+    .file-upload-btn {
+      position: relative;
+      padding: 8px 20px;
+      background: linear-gradient(180deg, #0071e3 0%, #0077ed 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3);
+    }
+
+    .file-upload-btn:hover {
+      background: linear-gradient(180deg, #0077ed 0%, #006edb 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(0, 113, 227, 0.4);
+    }
+
+    .file-upload-btn:active {
+      transform: translateY(0);
+    }
+
+    #file-input {
+      display: none;
+    }
+
+    .upload-button {
+      padding: 8px 24px;
+      background: linear-gradient(180deg, #34c759 0%, #30b350 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(52, 199, 89, 0.3);
+    }
+
+    .upload-button:hover {
+      background: linear-gradient(180deg, #30b350 0%, #2ca548 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(52, 199, 89, 0.4);
+    }
+
+    .download-button {
+      padding: 8px 24px;
+      background: linear-gradient(180deg, #ff9500 0%, #ff8c00 100%);
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(255, 149, 0, 0.3);
+    }
+
+    .download-button:hover {
+      background: linear-gradient(180deg, #ff8c00 0%, #ff7a00 100%);
+      transform: translateY(-1px);
+      box-shadow: 0 4px 12px rgba(255, 149, 0, 0.4);
+    }
+
+    .download-button:active,
+    .upload-button:active {
+      transform: translateY(0);
+    }
+
+    /* 主内容区域 - T型布局的纵向部分 */
+    .main-container {
+      flex: 1;
+      display: flex;
+      overflow: hidden;
+    }
+
+    /* 左侧配置面板 */
+    .config-panel {
+      width: 320px;
+      background: #fafafa;
+      border-right: 1px solid #e5e5e7;
+      padding: 20px;
+      overflow-y: auto;
+    }
+
+    .config-section {
+      background: white;
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .config-section h3 {
+      font-size: 14px;
+      font-weight: 600;
+      color: #1d1d1f;
+      margin-bottom: 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .config-section h3::before {
+      content: "";
+      width: 4px;
+      height: 16px;
+      background: linear-gradient(180deg, #0071e3 0%, #0077ed 100%);
+      border-radius: 2px;
+    }
+
+    .input-group {
+      margin-bottom: 12px;
+    }
+
+    .input-group:last-child {
+      margin-bottom: 0;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 12px;
+      font-weight: 500;
+      color: #6e6e73;
+      margin-bottom: 6px;
+    }
+
+    .input-group input,
+    .input-group select {
+      width: 100%;
+      padding: 8px 12px;
+      border: 1px solid #d1d1d6;
+      border-radius: 8px;
+      font-size: 13px;
+      background: white;
+      transition: all 0.2s;
+    }
+
+    .input-group input:focus,
+    .input-group select:focus {
+      outline: none;
+      border-color: #0071e3;
+      box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+    }
+
+    /* 右侧聊天区域 */
+    .chat-container {
       flex: 1;
       display: flex;
       flex-direction: column;
-      background-color: #fff;
-      overflow: hidden;
-      /* Prevent main content scroll */
+      background: white;
     }
 
-    .chat-area {
+    .chat-messages {
       flex: 1;
-      padding: 20px;
+      padding: 24px;
       overflow-y: auto;
-      /* Allow chat area to scroll */
-      border-bottom: 1px solid #ccc;
-    }
-
-    .input-area {
-      display: flex;
-      padding: 15px;
-      border-top: 1px solid #ccc;
-      background-color: #f9f9f9;
-    }
-
-    .input-area input[type="text"] {
-      flex: 1;
-      padding: 10px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      margin-right: 10px;
-    }
-
-    .input-area button {
-      padding: 10px 15px;
-      border: none;
-      background-color: #007bff;
-      color: white;
-      border-radius: 4px;
-      cursor: pointer;
-    }
-
-    .input-area button:hover {
-      background-color: #0056b3;
+      scroll-behavior: smooth;
     }
 
     .message {
-      margin-bottom: 15px;
-      padding: 10px;
-      border-radius: 5px;
+      margin-bottom: 16px;
+      display: flex;
+      animation: fadeIn 0.3s ease-in;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(10px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
     }
 
     .message.user {
-      background-color: #e1f5fe;
-      text-align: right;
-      margin-left: auto;
-      max-width: 70%;
+      justify-content: flex-end;
     }
 
-    .message.bot {
-      background-color: #f1f1f1;
-      text-align: left;
-      margin-right: auto;
+    .message-content {
       max-width: 70%;
+      padding: 12px 16px;
+      border-radius: 16px;
+      font-size: 14px;
+      line-height: 1.5;
       white-space: pre-wrap;
-      /* Preserve whitespace and line breaks */
+      word-wrap: break-word;
     }
 
-    .upload-section,
-    .query-section {
-      margin-bottom: 20px;
+    .message.bot .message-content {
+      background: #f5f5f7;
+      color: #1d1d1f;
+      border-bottom-left-radius: 4px;
     }
 
-    .upload-section h3,
-    .query-section h3 {
-      margin-top: 0;
-      margin-bottom: 10px;
-      color: #333;
+    .message.user .message-content {
+      background: linear-gradient(135deg, #0071e3 0%, #0077ed 100%);
+      color: white;
+      border-bottom-right-radius: 4px;
     }
 
-    .upload-section input[type="file"] {
-      margin-bottom: 10px;
+    /* 输入区域 */
+    .chat-input-area {
+      padding: 16px 24px;
+      background: #fafafa;
+      border-top: 1px solid #e5e5e7;
+      display: flex;
+      gap: 12px;
+      align-items: center;
     }
 
-    #upload-status,
-    #query-result {
-      margin-top: 10px;
-      padding: 10px;
-      background-color: #eee;
-      border: 1px solid #ddd;
+    .chat-input-area input {
+      flex: 1;
+      padding: 12px 16px;
+      border: 1px solid #d1d1d6;
+      border-radius: 20px;
+      font-size: 14px;
+      background: white;
+      transition: all 0.2s;
+    }
+
+    .chat-input-area input:focus {
+      outline: none;
+      border-color: #0071e3;
+      box-shadow: 0 0 0 4px rgba(0, 113, 227, 0.1);
+    }
+
+    .send-button {
+      width: 44px;
+      height: 44px;
+      background: linear-gradient(135deg, #0071e3 0%, #0077ed 100%);
+      border: none;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s;
+      box-shadow: 0 2px 8px rgba(0, 113, 227, 0.3);
+    }
+
+    .send-button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0, 113, 227, 0.4);
+    }
+
+    .send-button:active {
+      transform: scale(0.95);
+    }
+
+    .send-button::after {
+      content: "➤";
+      color: white;
+      font-size: 18px;
+    }
+
+    /* 状态提示 */
+    .status-badge {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      padding: 8px 16px;
+      background: rgba(52, 199, 89, 0.95);
+      color: white;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 500;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      z-index: 1000;
+      display: none;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        transform: translateX(100px);
+        opacity: 0;
+      }
+
+      to {
+        transform: translateX(0);
+        opacity: 1;
+      }
+    }
+
+    /* 滚动条样式 */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: #d1d1d6;
       border-radius: 4px;
-      font-size: 0.9em;
-      white-space: pre-wrap;
-      max-height: 200px;
-      overflow-y: auto;
     }
 
-    /* Responsive adjustments */
+    ::-webkit-scrollbar-thumb:hover {
+      background: #b1b1b6;
+    }
+
+    /* 响应式设计 */
+    @media (max-width: 1024px) {
+      .config-panel {
+        width: 280px;
+      }
+
+      .toolbar {
+        padding: 12px 16px;
+      }
+
+      .toolbar-section {
+        flex-basis: 100%;
+        border-right: none;
+        border-bottom: 1px solid #d1d1d6;
+        padding: 8px 0;
+      }
+
+      .toolbar-section:last-child {
+        border-bottom: none;
+      }
+    }
+
     @media (max-width: 768px) {
-      .container {
+      .app-container {
+        height: 95vh;
+        border-radius: 12px;
+      }
+
+      .main-container {
         flex-direction: column;
       }
 
-      .sidebar {
+      .config-panel {
         width: 100%;
-        height: auto;
-        max-height: 30vh;
-        /* Limit sidebar height on small screens */
+        max-height: 40vh;
         border-right: none;
-        border-bottom: 1px solid #ccc;
+        border-bottom: 1px solid #e5e5e7;
       }
 
-      .main-content {
-        flex: 1;
-        /* Take remaining height */
+      .message-content {
+        max-width: 85%;
       }
     }
   </style>
 </head>
 
 <body>
-  <div class="container">
-    <div class="sidebar">
-      <div class="upload-section">
-        <h3>上传SQL文件</h3>
+  <div class="app-container">
+    <!-- 顶部工具栏 - T型布局横向 -->
+    <div class="toolbar">
+      <div class="toolbar-section">
+        <label>📄 SQL文件:</label>
         <input type="file" id="file-input" accept=".sql">
+        <label for="file-input" class="file-upload-btn">选择文件</label>
       </div>
-      <hr>
-      <h3>测试数据库信息</h3>
-      <div class="index-selection-section" style="margin-bottom: 20px;">
-        <label for="dialect" style="display: block; margin-bottom: 5px;">数据库类型:</label>
-        <select id="dialect" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 4px;">
-          <option value="mysql" selected>mysql</option>
-          <option value="postgre">postgre</option>
-          <option value="oracle">oracle</option>
+      <div class="toolbar-section">
+        <label>数据库类型:</label>
+        <select id="dialect">
+          <option value="mysql" selected>MySQL</option>
+          <option value="postgre">PostgreSQL</option>
+          <option value="oracle">Oracle</option>
         </select>
       </div>
-      <div class="index-selection-section" style="margin-bottom: 20px;">
-        <label for="db_address" style="display: block; margin-bottom: 5px;">数据库地址:</label>
-        <input type="input" id="db_address" placeholder="localhost:3306/db_name"
-          style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
-      </div>
-      <div class="index-selection-section" style="margin-bottom: 20px;">
-        <label for="db_user" style="display: block; margin-bottom: 5px;">数据库用户:</label>
-        <input type="input" id="db_user" placeholder="数据库用户(读写权限)"
-          style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
-      </div>
-      <div class="index-selection-section" style="margin-bottom: 20px;">
-        <label for="db_pwd" style="display: block; margin-bottom: 5px;">数据库密码:</label>
-        <input type="password" id="db_pwd" placeholder="数据库密码"
-          style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
-      </div>
-      <hr>
-      <h3>生产数据库信息</h3>
-      <div class="index-selection-section" style="margin-bottom: 20px;">
-        <label for="prod_db_address" style="display: block; margin-bottom: 5px;">数据库地址:</label>
-        <input type="input" id="prod_db_address" placeholder="localhost:3306/db_name"
-          style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
-      </div>
-      <div class="index-selection-section" style="margin-bottom: 20px;">
-        <label for="prod_db_user" style="display: block; margin-bottom: 5px;">数据库用户:</label>
-        <input type="input" id="prod_db_user" placeholder="数据库用户(只读)"
-          style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
-      </div>
-      <div class="index-selection-section" style="margin-bottom: 20px;">
-        <label for="prod_db_pwd" style="display: block; margin-bottom: 5px;">数据库密码:</label>
-        <input type="password" id="prod_db_pwd" placeholder="数据库密码"
-          style="width: calc(100% - 22px); padding: 8px; border: 1px solid #ccc; border-radius: 4px; margin-bottom: 10px;">
-      </div>
-      <hr />
-      <div class="upload-section">
-        <button id="upload-button">Upload</button>
-        <div id="upload-status" style="display: none;"></div>
+      <div style="margin-left: auto; display: flex; gap: 12px; align-items: center;">
+        <button class="download-button" id="download-button" style="display: none;">⬇️ 下载文件</button>
+        <button class="upload-button" id="upload-button">上传并处理</button>
       </div>
     </div>
-    <div class="main-content">
-      <div class="chat-area" id="chat-area">
-        <div class="message bot">请上传用于校验和生成changeSet的数据库文件</div>
+
+    <!-- 主内容区 - T型布局纵向 -->
+    <div class="main-container">
+      <!-- 左侧配置面板 -->
+      <div class="config-panel">
+        <div class="config-section">
+          <h3>测试数据库</h3>
+          <div class="input-group">
+            <label>数据库地址</label>
+            <input type="text" id="db_address" placeholder="localhost:3306/db_name">
+          </div>
+          <div class="input-group">
+            <label>用户名</label>
+            <input type="text" id="db_user" placeholder="读写权限用户">
+          </div>
+          <div class="input-group">
+            <label>密码</label>
+            <input type="password" id="db_pwd" placeholder="数据库密码">
+          </div>
+        </div>
+
+        <div class="config-section">
+          <h3>生产数据库</h3>
+          <div class="input-group">
+            <label>数据库地址</label>
+            <input type="text" id="prod_db_address" placeholder="localhost:3306/db_name">
+          </div>
+          <div class="input-group">
+            <label>用户名</label>
+            <input type="text" id="prod_db_user" placeholder="只读用户">
+          </div>
+          <div class="input-group">
+            <label>密码</label>
+            <input type="password" id="prod_db_pwd" placeholder="数据库密码">
+          </div>
+        </div>
       </div>
-      <div class="input-area">
-        <input type="text" id="chat-input" placeholder="Type your message...">
-        <button id="send-button">Send</button>
+
+      <!-- 右侧聊天区域 -->
+      <div class="chat-container">
+        <div class="chat-messages" id="chat-area">
+          <div class="message bot">
+            <div class="message-content">👋 欢迎使用数据库交互工具！请上传SQL文件并配置数据库连接信息开始使用。</div>
+          </div>
+        </div>
+        <div class="chat-input-area">
+          <input type="text" id="chat-input" placeholder="输入消息...">
+          <button class="send-button" id="send-button"></button>
+        </div>
       </div>
     </div>
   </div>
 
+  <div class="status-badge" id="status-badge">处理中...</div>
+
   <script>
     const fileInput = document.getElementById('file-input');
     const uploadButton = document.getElementById('upload-button');
-    const uploadStatus = document.getElementById('upload-status');
+    const downloadButton = document.getElementById('download-button');
     const chatArea = document.getElementById('chat-area');
     const chatInput = document.getElementById('chat-input');
     const sendButton = document.getElementById('send-button');
+    const statusBadge = document.getElementById('status-badge');
 
-    // --- File Upload Logic ---
-    uploadButton.addEventListener('click', async () => {
-      const file = fileInput.files[0];
-      if (!file) {
-        alert('Please select a file first.');
+    let downloadUrl = ''; // 存储下载URL
+
+    // 显示状态提示
+    function showStatus(message, duration = 3000) {
+      statusBadge.textContent = message;
+      statusBadge.style.display = 'block';
+      setTimeout(() => {
+        statusBadge.style.display = 'none';
+      }, duration);
+    }
+
+    // 文件选择提示
+    fileInput.addEventListener('change', (e) => {
+      const fileName = e.target.files[0]?.name;
+      if (fileName) {
+        showStatus(`已选择: ${fileName}`);
+      }
+    });
+
+    // 下载按钮点击事件
+    downloadButton.addEventListener('click', async () => {
+      if (!downloadUrl) {
+        alert('没有可下载的文件');
         return;
       }
 
-      uploadStatus.textContent = 'Uploading...';
-      uploadStatus.style.display = 'block';
-      chatArea.innerHTML = ''; // Clear chat area for potentially streamed markdown
+      try {
+        showStatus('正在下载...', 5000);
+
+        // 创建一个临时的a标签来触发下载
+        const a = document.createElement('a');
+        a.href = downloadUrl;
+        a.download = ''; // 使用服务器提供的文件名
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        showStatus('✓ 下载已开始');
+      } catch (error) {
+        console.error('Download error:', error);
+        showStatus('下载失败', 3000);
+      }
+    });
+
+    // 文件上传逻辑
+    uploadButton.addEventListener('click', async () => {
+      const file = fileInput.files[0];
+      if (!file) {
+        alert('请先选择SQL文件');
+        return;
+      }
+
+      // 隐藏下载按钮
+      downloadButton.style.display = 'none';
+      downloadUrl = '';
+
+      showStatus('上传中...', 10000);
+      chatArea.innerHTML = '';
 
       const formData = new FormData();
       formData.append('file', file);
-      const dialectInput = document.getElementById('dialect');
-      const dialect = dialectInput.value.trim();
-      formData.append("dialect", dialect)
-      const dbAddressInput = document.getElementById('db_address');
-      const db_address = dbAddressInput.value.trim();
-      formData.append("db_addr", db_address)
-      const dbUserInput = document.getElementById('db_user');
-      const db_user = dbUserInput.value.trim();
-      formData.append("db_user", db_user)
-      const dbPwdInput = document.getElementById('db_pwd');
-      const db_pwd = dbPwdInput.value.trim();
-      formData.append("db_pwd", db_pwd)
-      const prodDbAddressInput = document.getElementById('prod_db_address');
-      const prod_db_addrss = prodDbAddressInput.value.trim();
-      formData.append("prod_db_addr", prod_db_addrss)
-      const prodDbUerInput = document.getElementById('prod_db_user');
-      const prod_db_user = prodDbUerInput.value.trim();
-      formData.append("prod_db_user", prod_db_user)
-      const prodDbPwdInput = document.getElementById('prod_db_pwd');
-      const prod_db_pwd = prodDbPwdInput.value.trim();
-      formData.append("prod_db_pwd", prod_db_pwd)
-
-      // NOTE: index_name is sent as a query parameter, not in FormData body
+      formData.append('dialect', document.getElementById('dialect').value);
+      formData.append('db_addr', document.getElementById('db_address').value.trim());
+      formData.append('db_user', document.getElementById('db_user').value.trim());
+      formData.append('db_pwd', document.getElementById('db_pwd').value.trim());
+      formData.append('prod_db_addr', document.getElementById('prod_db_address').value.trim());
+      formData.append('prod_db_user', document.getElementById('prod_db_user').value.trim());
+      formData.append('prod_db_pwd', document.getElementById('prod_db_pwd').value.trim());
 
       try {
-        // Construct the URL with index_name as a query parameter if provided
-        let uploadUrl = '/api/upload';
-        const response = await fetch(uploadUrl, { // Use the potentially modified URL
+        const response = await fetch('/api/upload', {
           method: 'POST',
-          body: formData, // FormData still contains the file
+          body: formData,
         });
-
-        uploadStatus.textContent = `Status: ${response.status} ${response.statusText}`;
 
         if (!response.ok) {
           const errorText = await response.text();
-          uploadStatus.textContent += `\nError: ${errorText}`;
-          addMessage('bot', `Upload failed: ${errorText}`);
+          addMessage('bot', `❌ 上传失败: ${errorText}`);
+          showStatus('上传失败', 3000);
           return;
         }
 
-        // Handle PDF success message
-        if (file.name.toLowerCase().endsWith('.pdf')) {
-          const successText = await response.text();
-          uploadStatus.textContent += `\n${successText}`;
-          addMessage('bot', successText); // Show success in chat too
-          return; // Nothing more to stream for PDF
-        }
-
-        // Handle streamed response for DOC/DOCX
         if (response.headers.get('Content-Type')?.includes('text/event-stream')) {
-          uploadStatus.textContent += '\nStreaming Markdown...';
+          showStatus('处理中...', 10000);
           const reader = response.body.getReader();
           const decoder = new TextDecoder();
-          let markdownContent = '';
-          let botMessageDiv = addMessage('bot', 'Processing document...'); // Add initial message
+          let change_set = '';
+          let botMessageDiv = addMessage('bot', '正在处理文档...');
+          let buffer = "";
 
           while (true) {
             const { done, value } = await reader.read();
             if (done) break;
-            const chunk = decoder.decode(value, { stream: true });
 
-            // Assuming the stream sends markdown directly
-            markdownContent += chunk;
-            botMessageDiv.textContent = markdownContent; // Update message content
-            chatArea.scrollTop = chatArea.scrollHeight; // Scroll down
+            buffer += decoder.decode(value, { stream: true });
+
+            const events = buffer.split("\n\n");
+            buffer = events.pop(); // 半包
+            for (const evt of events) {
+              const lines = evt.split("\n");
+              let eventType = "message";
+              let data = "";
+
+              for (const line of lines) {
+                if (line.startsWith("event:")) {
+                  eventType = line.slice(6).trim();
+                }
+                if (line.startsWith("data:")) {
+                  data += line.slice(5).trim();
+                }
+              }
+
+              if (eventType === "control") {
+                const jsonData = JSON.parse(data);
+                downloadUrl = jsonData.url;
+                downloadButton.style.display = 'block';
+                showStatus('✓ 文件已准备好下载');
+                console.log("下载地址:", jsonData.url);
+              } else if (eventType === "done") {
+                change_set += "AI生成ChangeSet完毕，仅供参考";
+              }
+              else {
+                change_set += data + "\n";
+                botMessageDiv.querySelector('.message-content').textContent = change_set;
+                chatArea.scrollTop = chatArea.scrollHeight;
+              }
+            }
           }
-          uploadStatus.textContent += '\nStreaming complete.';
-          // Final update just in case
-          botMessageDiv.textContent = markdownContent;
-          chatArea.scrollTop = chatArea.scrollHeight;
-
+          showStatus('✓ 处理完成');
         } else {
-          // Fallback for non-streamed success (shouldn't happen based on Python code)
           const text = await response.text();
-          uploadStatus.textContent += `\nResponse: ${text}`;
           addMessage('bot', text);
+          showStatus('✓ 上传完成');
         }
 
       } catch (error) {
         console.error('Upload error:', error);
-        uploadStatus.textContent = `Upload failed: ${error.message}`;
-        addMessage('bot', `Upload failed: ${error.message}`);
+        addMessage('bot', `❌ 上传失败: ${error.message}`);
+        showStatus('上传失败', 3000);
       } finally {
-        fileInput.value = ''; // Clear file input
+        fileInput.value = '';
       }
     });
 
-    // --- Chat Logic ---
+    // 聊天逻辑
     sendButton.addEventListener('click', handleSendMessage);
     chatInput.addEventListener('keypress', (e) => {
       if (e.key === 'Enter') {
@@ -340,7 +681,7 @@
 
       addMessage('user', prompt);
       chatInput.value = '';
-      let botMessageDiv = addMessage('bot', '...'); // Placeholder for bot response
+      let botMessageDiv = addMessage('bot', '思考中...');
 
       try {
         const response = await fetch('/api/chat', {
@@ -348,43 +689,57 @@
           headers: {
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify({ prompt: prompt }), // Use selected index name
+          body: JSON.stringify({ prompt: prompt }),
         });
 
         if (!response.ok) {
           const errorText = await response.text();
-          botMessageDiv.textContent = `Error: ${errorText}`;
+          botMessageDiv.querySelector('.message-content').textContent = `❌ 错误: ${errorText}`;
           throw new Error(`Network response was not ok: ${response.statusText}`);
         }
 
-        // Handle Server-Sent Events (SSE)
         const reader = response.body.getReader();
         const decoder = new TextDecoder();
-        let accumulatedResponse = "";
+        let change_set = "";
+        let buffer = "";
 
         while (true) {
           const { done, value } = await reader.read();
           if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
-          // Simple handling: append chunk to message
-          // Assumes server sends plain text chunks directly
-          //content = JSON.parse(chunk)
-          console.log(chunk)
-          accumulatedResponse += chunk //content.content;
-          botMessageDiv.textContent = accumulatedResponse; // Update the bot message div
-          chatArea.scrollTop = chatArea.scrollHeight; // Keep scrolled to bottom
+
+          buffer += decoder.decode(value, { stream: true });
+
+          const events = buffer.split("\n\n");
+          buffer = events.pop(); // 半包
+          for (const evt of events) {
+            const lines = evt.split("\n");
+            let eventType = "message";
+            let data = "";
+
+            for (const line of lines) {
+              if (line.startsWith("event:")) {
+                eventType = line.slice(6).trim();
+              }
+              if (line.startsWith("data:")) {
+                data += line.slice(5).trim();
+              }
+            }
+
+            if (eventType === "done") {
+              showStatus('✓ ChangeSet生成完毕');
+              change_set += "AI生成ChangeSet完毕，仅供参考";
+            } else {
+              change_set += data + "\n";
+            }
+
+            botMessageDiv.querySelector('.message-content').textContent = change_set;
+            chatArea.scrollTop = chatArea.scrollHeight;
+          }
         }
-        // Final update just in case
-        botMessageDiv.textContent = accumulatedResponse;
-        chatArea.scrollTop = chatArea.scrollHeight;
-
-
       } catch (error) {
         console.error('Chat error:', error);
         if (botMessageDiv) {
-          botMessageDiv.textContent = `Error fetching response: ${error.message}`;
-        } else {
-          addMessage('bot', `Error fetching response: ${error.message}`);
+          botMessageDiv.querySelector('.message-content').textContent = `❌ 错误: ${error.message}`;
         }
       }
     }
@@ -392,44 +747,14 @@
     function addMessage(sender, text) {
       const messageDiv = document.createElement('div');
       messageDiv.classList.add('message', sender);
-      messageDiv.textContent = text;
+      const contentDiv = document.createElement('div');
+      contentDiv.classList.add('message-content');
+      contentDiv.textContent = text;
+      messageDiv.appendChild(contentDiv);
       chatArea.appendChild(messageDiv);
-      chatArea.scrollTop = chatArea.scrollHeight; // Scroll to the bottom
-      return messageDiv; // Return the created div for potential updates
+      chatArea.scrollTop = chatArea.scrollHeight;
+      return messageDiv;
     }
-
-    // --- Query Logic (Placeholder) ---
-    /*
-    queryButton.addEventListener('click', async () => {
-        const prompt = queryPrompt.value.trim();
-        const indexName = queryIndex.value.trim() || "child_english"; // Default if empty
-
-        if (!prompt) {
-            alert('Please enter a query prompt.');
-            return;
-        }
-
-        queryResult.textContent = 'Querying...';
-        queryResult.style.display = 'block';
-
-        try {
-            const response = await fetch(`/api/query?prompt=${encodeURIComponent(prompt)}`);
-            queryResult.textContent = `Status: ${response.status} ${response.statusText}\n`;
-
-            if (!response.ok) {
-                const errorText = await response.text();
-                queryResult.textContent += `Error: ${errorText}`;
-            } else {
-                const data = await response.json();
-                queryResult.textContent += `Result:\n${JSON.stringify(data.result, null, 2)}`;
-            }
-        } catch (error) {
-            console.error('Query error:', error);
-            queryResult.textContent = `Query failed: ${error.message}`;
-        }
-    });
-    */
-
   </script>
 </body>
 

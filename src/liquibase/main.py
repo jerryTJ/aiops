@@ -4,6 +4,7 @@ import re
 import os
 import uuid
 import asyncio
+import json
 from datetime import datetime
 
 app = Flask(__name__)
@@ -18,7 +19,14 @@ def index():
 
 def sse_format(message: str) -> str:
     """格式化为 SSE 输出格式"""
-    return f"{message}\n\n"
+    return f"{message}\n"
+
+
+def sse_event(event, data):
+    """
+    生成一条标准 SSE 事件
+    """
+    return f"event: {event}\ndata: {data}\n\n"
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -45,29 +53,39 @@ def create_changeset():
         def generate():
             sql_list = parse_sql_file(filepath)
             if not sql_list:
-                yield sse_format("No SQL found.")
+                yield sse_event("message", "No SQL found.")
                 return
 
             for idx, sql in enumerate(sql_list, 1):
-                yield sse_format(f"[正在解析第{idx}条sql:]{sql}")
+                yield sse_event("message", f"[正在解析第{idx}条sql:]{sql}")
                 
                 # LLM 调用
                 result = asyncio.run(ask_llm(sql, dev_db_config, prod_db_config, db_name))
                 if result["status"] == "success":
-                    yield sse_format("生成的ChangeSet如下:")
+                    yield sse_event("message", "生成的ChangeSet如下:")
                     change_sets.append({"index": idx, "sql": sql, "result":result["message"]})
                     # 按行输出
                     for line in result["message"].split("\n"):
-                        yield sse_format(f"{line}")
+                        yield sse_event("message", f"{line}")
                 else:
-                    yield sse_format(f"解析第{idx}条sql生成ChangeSet失败，原因如下:")
-                    yield sse_format(result["message"])
-                    yield sse_format("如果进行修改，请重新输入修改后的sql")
+                    yield sse_event("message", f"解析第{idx}条sql生成ChangeSet失败，原因如下:")
+                    yield sse_event("message", result["message"])
+                    yield sse_event("message", "如果进行修改，请重新输入修改后的sql")
             # 所有sql处理完后，写入changeSet文件
             file_name = write_list_split_by_newline(change_sets, db_name, mode="w", encoding="utf-8")
-            yield sse_format(f"changeSet文件已生成，下载地址:http://127.0.0.1:5001/download/{file_name} ")
+            yield sse_event("message", "changeSet文件已生成，可以点击右上角的链接下载")
+            url = f"http://127.0.0.1:5001/download/{file_name}"
+            yield sse_event("control", json.dumps({"url": url}))
+            yield sse_event("done", "end") 
 
-        return Response(generate(), mimetype="text/event-stream")
+        return Response(
+                generate(),
+                mimetype="text/event-stream",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "X-Accel-Buffering": "no"
+                }
+        )
         
     except Exception as e:
         return Response(f"An error occurred: {str(e)}", 500)
@@ -155,25 +173,27 @@ def repaire_sql():
     data = request.get_json()
     prompt_sql = data.get("prompt", "")
     if prompt_sql == "":
-        return Response(sse_format("请输入sql"), mimetype="text/event-stream")
+        return Response(sse_event("message", "请输入sql"), mimetype="text/event-stream")
     dev_db_config = session["dev_db_config"]
     prod_db_config = session["prod_db_config"]
     db_name = session["db_name"]
     if dev_db_config is None or dev_db_config == "":
-        return Response(sse_format("请先上传sql文件和配置数据库信息"), mimetype="text/event-stream")
+        return Response(sse_event("message", "请先上传sql文件和配置数据库信息"), mimetype="text/event-stream")
 
     def generate():
         # LLM 调用
         result = asyncio.run(ask_llm(prompt_sql, dev_db_config, prod_db_config, db_name))
         if result["status"] == "success":
-            yield sse_format("生成的ChangeSet如下:")
+            yield sse_event("message", "生成的ChangeSet如下:")
             # 按行输出
             for line in result["message"].split("\n"):
-                yield sse_format(f"{line}")
+                yield sse_event("message", f"{line}")
         else:
-            yield sse_format("生成ChangeSet失败，原因如下:")
-            yield sse_format(result["message"])
-            yield sse_format("如果进行修改，请重新输入修改sql")
+            yield sse_event("message", "生成ChangeSet失败，原因如下:")
+            # 按行输出
+            for line in result["message"].split("\n"):
+                yield sse_event("message", f"{line}")
+            yield sse_event("message", "如果进行修改，请重新输入修改sql")
 
     return Response(generate(), mimetype="text/event-stream")
 
